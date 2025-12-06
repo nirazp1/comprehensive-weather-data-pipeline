@@ -22,7 +22,8 @@ processed/
 *.json
 !package.json
 !tsconfig.json
-# Only ignore PDF and about/ folder in docs, not the entire docs/ directory
+# Documentation folder
+docs/
 docs/RESEARCH_PAPER.pdf
 docs/about/
 
