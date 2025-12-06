@@ -1,0 +1,28 @@
+# Project Structure Summary
+
+## Organized Folders:
+
+📁 src/          - Core pipeline source code
+🐳 docker/      - Docker configuration files
+📨 kafka/       - Kafka streaming code
+🌐 web/         - Streamlit web application
+🛠️ scripts/     - CLI tools and scripts
+📚 examples/    - Example implementations
+📖 docs/        - Documentation and research paper
+🧪 tests/       - Test suite
+📊 data/        - Data storage directories
+
+## Quick Commands:
+
+# Pipeline
+python3 -m src.simple_end_to_end
+
+# Big Data Generator
+python3 scripts/generate_big_data_cli.py --cities 25
+
+# Web App
+streamlit run web/streamlit_app.py
+
+# Docker
+cd docker && docker-compose up -d
+

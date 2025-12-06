@@ -1,0 +1,81 @@
+version: '3.8'
+
+services:
+  # Zookeeper for Kafka
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.5.0
+    container_name: zookeeper
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+    ports:
+      - "2181:2181"
+    healthcheck:
+      test: ["CMD", "nc", "-z", "localhost", "2181"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Kafka Broker
+  kafka:
+    image: confluentinc/cp-kafka:7.5.0
+    container_name: kafka
+    depends_on:
+      - zookeeper
+    ports:
+      - "9092:9092"
+      - "9093:9093"
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092,PLAINTEXT_INTERNAL://kafka:9093
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_INTERNAL:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT_INTERNAL
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+      KAFKA_NUM_PARTITIONS: 3
+    healthcheck:
+      test: ["CMD", "kafka-broker-api-versions", "--bootstrap-server", "localhost:9092"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Weather Data Ingestion Service
+  weather-ingester:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    container_name: weather-ingester
+    depends_on:
+      kafka:
+        condition: service_healthy
+    environment:
+      - OPENWEATHER_API_KEY=${OPENWEATHER_API_KEY}
+      - NOAA_API_KEY=${NOAA_API_KEY}
+      - KAFKA_BOOTSTRAP_SERVERS=kafka:9093
+      - KAFKA_TOPIC=${KAFKA_TOPIC:-weather-data}
+      - RAW_DATA_DIR=/app/data/raw
+      - PROCESSED_DATA_DIR=/app/data/processed
+    volumes:
+      - ../data:/app/data
+      - ../.env:/app/.env
+    restart: unless-stopped
+    command: python -m src.simple_end_to_end
+
+  # Kafka Consumer (optional - for testing)
+  kafka-consumer:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    container_name: kafka-consumer
+    depends_on:
+      kafka:
+        condition: service_healthy
+    environment:
+      - KAFKA_BOOTSTRAP_SERVERS=kafka:9093
+      - KAFKA_TOPIC=${KAFKA_TOPIC:-weather-data}
+    volumes:
+      - ../data:/app/data
+    command: python -m kafka.kafka_consumer
+    restart: "no"
+
